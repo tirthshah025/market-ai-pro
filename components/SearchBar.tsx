@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Loader2, X } from "lucide-react";
 import { SearchResult } from "@/lib/types";
 
-export default function SearchBar({ onSelect }: { onSelect: (symbol: string) => void }) {
+export default function SearchBar({
+  onSelect,
+  placeholder = "Search stocks, mutual funds, IPOs...",
+}: {
+  onSelect?: (symbol: string) => void;
+  placeholder?: string;
+}) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -36,15 +44,24 @@ export default function SearchBar({ onSelect }: { onSelect: (symbol: string) => 
       } finally {
         setLoading(false);
       }
-    }, 280);
+    }, 250);
     return () => clearTimeout(t);
   }, [query]);
+
+  function handleChoice(symbol: string) {
+    setQuery("");
+    setOpen(false);
+    if (onSelect) {
+      onSelect(symbol);
+    } else {
+      router.push(`/stock/${encodeURIComponent(symbol)}`);
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (query.trim()) {
-      onSelect(query.trim().toUpperCase());
-      setOpen(false);
+      handleChoice(query.trim().toUpperCase());
     }
   }
 
@@ -56,17 +73,16 @@ export default function SearchBar({ onSelect }: { onSelect: (symbol: string) => 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Search NSE/BSE stocks e.g. RELIANCE, TCS, INFY..."
-          className="w-full bg-card-strong border border-border rounded-xl pl-10 pr-9 py-2 text-xs sm:text-sm
-                     text-gray-100 placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+          placeholder={placeholder}
+          className="w-full input-field pl-10 pr-9 py-2.5 text-xs sm:text-sm font-medium"
         />
         {loading ? (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted animate-spin" />
+          <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted animate-spin" />
         ) : query ? (
           <button
             type="button"
             onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-gray-200"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -78,18 +94,14 @@ export default function SearchBar({ onSelect }: { onSelect: (symbol: string) => 
           {results.map((r) => (
             <button
               key={r.symbol}
-              onClick={() => {
-                onSelect(r.symbol);
-                setQuery("");
-                setOpen(false);
-              }}
-              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary/10 text-left transition-colors border-b border-border/40 last:border-0"
+              onClick={() => handleChoice(r.symbol)}
+              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-primary-soft text-left transition-colors border-b border-border/40 last:border-0"
             >
               <div>
-                <div className="text-xs sm:text-sm font-bold text-gray-100 font-mono-num">{r.symbol}</div>
+                <div className="text-xs sm:text-sm font-bold text-foreground font-mono-num">{r.symbol}</div>
                 <div className="text-[11px] text-muted truncate max-w-[220px]">{r.name}</div>
               </div>
-              <span className="text-[10px] uppercase font-semibold text-muted bg-white/5 border border-border px-2 py-0.5 rounded">
+              <span className="text-[10px] uppercase font-semibold text-muted bg-card-strong border border-border px-2 py-0.5 rounded">
                 {r.exchange || "NSE"}
               </span>
             </button>
