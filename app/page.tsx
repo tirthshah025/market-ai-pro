@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   LineChart,
@@ -10,7 +11,8 @@ import {
   TrendingDown,
   BarChart3,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  ArrowUpRight
 } from "lucide-react";
 import TickerTape from "@/components/TickerTape";
 import SearchBar from "@/components/SearchBar";
@@ -34,14 +36,28 @@ const RANGES = [
 ];
 
 const MARKET_INDEXES = [
-  { name: "NIFTY 50", value: 24590.4, change: 96.2, changePct: 0.39 },
-  { name: "SENSEX", value: 80334.1, change: 280.6, changePct: 0.35 },
-  { name: "BANK NIFTY", value: 50430.5, change: -90.4, changePct: -0.18 },
-  { name: "NIFTY IT", value: 39280.2, change: 145.8, changePct: 0.37 },
-  { name: "NIFTY PHARMA", value: 21980.7, change: 58.5, changePct: 0.27 },
+  { name: "NIFTY 50", value: "24,590.40", change: "+96.20", changePct: "+0.39%", positive: true },
+  { name: "SENSEX", value: "80,334.10", change: "+280.60", changePct: "+0.35%", positive: true },
+  { name: "BANK NIFTY", value: "50,430.50", change: "-90.40", changePct: "-0.18%", positive: false },
+  { name: "NIFTY IT", value: "39,280.20", change: "+145.80", changePct: "+0.37%", positive: true },
+  { name: "NIFTY PHARMA", value: "21,980.70", change: "+58.50", changePct: "+0.27%", positive: true },
 ];
 
-const QUICK_TICKS = ["RELIANCE", "TCS", "INFY", "HDFCBANK", "SBIN"];
+const TOP_GAINERS = [
+  { symbol: "TATAMOTORS.NS", name: "Tata Motors", price: "₹1,045.20", change: "+4.12%" },
+  { symbol: "SBIN.NS", name: "State Bank of India", price: "₹842.60", change: "+3.28%" },
+  { symbol: "RELIANCE.NS", name: "Reliance Industries", price: "₹1,450.60", change: "+2.65%" },
+  { symbol: "ICICIBANK.NS", name: "ICICI Bank", price: "₹1,215.40", change: "+2.10%" },
+];
+
+const TOP_LOSERS = [
+  { symbol: "HDFCBANK.NS", name: "HDFC Bank", price: "₹1,610.80", change: "-1.85%" },
+  { symbol: "AXISBANK.NS", name: "Axis Bank", price: "₹1,140.20", change: "-1.42%" },
+  { symbol: "KOTAKBANK.NS", name: "Kotak Mahindra Bank", price: "₹1,780.50", change: "-1.15%" },
+  { symbol: "WIPRO.NS", name: "Wipro", price: "₹495.30", change: "-0.90%" },
+];
+
+const QUICK_TICKS = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "SBIN.NS", "TATAMOTORS.NS"];
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
@@ -50,25 +66,27 @@ const NAV_ITEMS = [
   { href: "/portfolio", label: "Portfolio" },
   { href: "/mutual-funds", label: "Investments" },
   { href: "/ai-research", label: "AI Research" },
+  { href: "/screener", label: "Screener" },
+  { href: "/ipo-intelligence", label: "IPOs" },
 ];
 
-function formatMoney(value?: number) {
-  if (value == null || Number.isNaN(value)) return "N/A";
-  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value);
-}
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const initialSymbol = searchParams.get("symbol") || "RELIANCE.NS";
 
-function formatDelta(value: number) {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
-}
-
-export default function Home() {
-  const [symbol, setSymbol] = useState("RELIANCE.NS");
+  const [symbol, setSymbol] = useState(initialSymbol);
   const [range, setRange] = useState("6mo");
   const [quote, setQuote] = useState<QuoteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [watchlistLoaded, setWatchlistLoaded] = useState(false);
+  const [moverTab, setMoverTab] = useState<"gainers" | "losers">("gainers");
+
+  useEffect(() => {
+    const qSym = searchParams.get("symbol");
+    if (qSym) setSymbol(qSym);
+  }, [searchParams]);
 
   useEffect(() => {
     try {
@@ -91,8 +109,8 @@ export default function Home() {
     try {
       const res = await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}&range=${rng}&interval=1d`);
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || `Could not find data for '${sym}'.`);
+      if (!res.ok || data.error) {
+        setError(data.error || `Could not find stock data for '${sym}'.`);
         setQuote(null);
       } else {
         setQuote(data);
@@ -112,23 +130,27 @@ export default function Home() {
     setWatchlist((prev) => (prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]));
   }
 
+  const isWatched = watchlist.includes(symbol);
+
   return (
     <main className="min-h-screen app-shell">
       <TickerTape />
 
       <header className="topbar">
-        <div className="max-w-[1420px] mx-auto px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="max-w-[1440px] mx-auto px-4 md:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+          <Link href="/" className="flex items-center gap-3 min-w-0">
             <div className="brand-mark">
               <LineChart className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="brand-title">MarketAI Pro</h1>
+              <h1 className="brand-title flex items-center gap-1.5">
+                MarketAI Pro <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">PRO</span>
+              </h1>
               <p className="brand-subtitle">AI-powered financial intelligence for the Indian market.</p>
             </div>
-          </div>
+          </Link>
 
-          <nav className="main-nav" aria-label="Main navigation">
+          <nav className="main-nav hidden md:flex" aria-label="Main navigation">
             {NAV_ITEMS.map((item) => (
               <Link key={item.href} href={item.href} className={item.href === "/" ? "active" : ""}>
                 {item.label}
@@ -136,7 +158,7 @@ export default function Home() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <ThemeToggle />
             <div className="top-search-wrap">
               <SearchBar onSelect={setSymbol} />
@@ -145,248 +167,160 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-[1420px] mx-auto px-4 md:px-6 py-6 lg:py-8">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-6 py-6 lg:py-8 space-y-6">
+        {/* Quick Tickers & Hero Header */}
         <section className="hero-panel">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div className="max-w-2xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
               <div className="eyebrow-row">
-                <span className="status-dot" />
-                Good morning 👋
+                <span className="status-dot" /> Live Market Feed · NSE / BSE
               </div>
-              <h2 className="hero-title">Understand the market before it moves.</h2>
-              <p className="hero-subtitle">
-                Analyze stocks, discover opportunities, track your portfolio and use AI to understand the Indian market.
-              </p>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-100 mt-2 tracking-tight">
+                Indian Financial Markets & AI Analytics
+              </h2>
             </div>
-
-            <div className="hero-stats">
-              <div className="hero-mini-card">
-                <span className="label">AI Market Score</span>
-                <strong>72 / 100</strong>
-                <span className="pill positive">Bullish</span>
-              </div>
-              <div className="hero-mini-card">
-                <span className="label">Portfolio Risk</span>
-                <strong>Moderate</strong>
-                <span className="pill neutral">Balanced</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted font-semibold mr-1">Popular Tickers:</span>
+              {QUICK_TICKS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSymbol(s)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-mono-num font-semibold transition-all ${
+                    symbol === s
+                      ? "bg-primary text-white shadow-glow"
+                      : "bg-white/5 border border-border text-gray-300 hover:bg-white/10"
+                  }`}
+                >
+                  {s.replace(".NS", "")}
+                </button>
+              ))}
             </div>
-          </div>
-
-          <div className="quick-search-row">
-            {QUICK_TICKS.map((item) => (
-              <button key={item} type="button" onClick={() => setSymbol(`${item}.NS`)} className="quick-search-pill">
-                {item}
-              </button>
-            ))}
           </div>
         </section>
 
-        <section className="market-grid">
-          {MARKET_INDEXES.map((index) => (
-            <div key={index.name} className="market-card">
-              <div className="market-card-top">
-                <div>
-                  <p className="market-name">{index.name}</p>
-                  <p className="market-value">{formatMoney(index.value)}</p>
-                </div>
-                <div className={`market-trend ${index.change >= 0 ? "positive" : "negative"}`}>
-                  {index.change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  <span>{formatDelta(index.change)} ({index.changePct.toFixed(2)}%)</span>
-                </div>
-              </div>
-              <div className="sparkline-bar">
-                <span style={{ width: `${Math.min(100, Math.abs(index.changePct) * 110)}%` }} />
+        {/* Live Market Indices Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5">
+          {MARKET_INDEXES.map((idx) => (
+            <div key={idx.name} className="glass-panel glow-border p-4 hover:scale-[1.01] transition-transform">
+              <p className="text-[11px] uppercase tracking-wider text-muted font-bold">{idx.name}</p>
+              <p className="text-xl font-bold font-mono-num text-gray-100 mt-1">{idx.value}</p>
+              <div className={`mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold font-mono-num ${
+                idx.positive ? "bg-positive/10 text-up border border-positive/20" : "bg-negative/10 text-down border border-negative/20"
+              }`}>
+                {idx.positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {idx.change} ({idx.changePct})
               </div>
             </div>
           ))}
-        </section>
+        </div>
 
-        <section className="dashboard-split">
-          <div className="section-card movers-card">
-            <div className="section-header">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <h3>Market Movers</h3>
-              </div>
-              <div className="segmented">
-                <button type="button" className="active">Top Gainers</button>
-                <button type="button">Top Losers</button>
-              </div>
-            </div>
-
-            <div className="movers-list">
-              {[
-                ["RELIANCE.NS", "Reliance", 1450.6, 2.65, 1000000],
-                ["TCS.NS", "TCS", 3940.2, 1.82, 980000],
-                ["INFY.NS", "Infosys", 1560.8, 1.44, 870000],
-                ["HDFCBANK.NS", "HDFC Bank", 1770.1, 0.92, 760000],
-              ].map(([ticker, name, price, change, volume]) => (
-                <div key={ticker} className="mover-row">
-                  <div>
-                    <p className="mover-symbol">{ticker}</p>
-                    <p className="mover-name">{name}</p>
-                  </div>
-                  <div className="mover-price">₹{Number(price).toFixed(2)}</div>
-                  <div className={`mover-change ${Number(change) >= 0 ? "positive" : "negative"}`}>
-                    {Number(change) >= 0 ? "+" : ""}
-                    {Number(change).toFixed(2)}%
-                  </div>
-                  <div className="mover-volume">{(Number(volume) / 1000000).toFixed(1)}M</div>
-                </div>
-              ))}
+        {/* Stock Detail & Chart Section */}
+        {loading ? (
+          <div className="glass-panel glow-border p-16 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <p className="text-sm font-semibold text-muted">Fetching real-time market data for {symbol}...</p>
+          </div>
+        ) : error ? (
+          <div className="glass-panel glow-border p-8 border-negative/30 bg-negative/5 flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-down shrink-0" />
+            <div>
+              <h3 className="font-bold text-gray-100">Unable to load stock quote</h3>
+              <p className="text-xs text-muted mt-0.5">{error}</p>
             </div>
           </div>
-
-          <div className="section-card pulse-card">
-            <div className="section-header">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <h3>AI Market Pulse</h3>
-              </div>
-              <span className="pulse-badge">BULLISH</span>
-            </div>
-
-            <div className="score-box">
-              <div>
-                <span className="score-label">AI Market Score</span>
-                <p className="score-value">72 / 100</p>
-              </div>
-              <div className="score-ring">
-                <span>72%</span>
-              </div>
-            </div>
-
-            <div className="sector-list">
-              {[
-                ["IT", "Strong"],
-                ["Banking", "Positive"],
-                ["Energy", "Neutral"],
-                ["Pharma", "Positive"],
-                ["Auto", "Weak"],
-              ].map(([sector, signal]) => (
-                <div key={sector} className="sector-row">
-                  <span>{sector}</span>
-                  <span className={`sector-pill ${signal.toLowerCase()}`}>{signal}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <div className="max-w-[1400px] mx-auto pt-6 grid grid-cols-1 xl:grid-cols-[1.5fr_360px] gap-6">
-          <div className="space-y-6 min-w-0">
-            {loading && (
-              <div className="section-card p-12 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                <p className="text-muted text-sm">Fetching live data for {symbol}...</p>
-              </div>
-            )}
-
-            {!loading && error && (
-              <div className="section-card p-10 flex flex-col items-center justify-center gap-3 text-center">
-                <AlertTriangle className="w-8 h-8 text-negative" />
-                <p className="text-gray-200 font-medium">{error}</p>
-                <p className="text-xs text-muted">
-                  Try formats like AAPL, TSLA, or RELIANCE.NS / TCS.NS for NSE-listed stocks.
-                </p>
-              </div>
-            )}
-
-            {!loading && !error && quote && (
-              <>
-                <PriceStats quote={quote} onToggleWatch={toggleWatch} isWatched={watchlist.includes(symbol)} />
-
-                <div className="section-card p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-gray-100">Price Chart</h3>
-                    <div className="segmented">
-                      {RANGES.map((r) => (
-                        <button
-                          key={r.range}
-                          type="button"
-                          onClick={() => setRange(r.range)}
-                          className={range === r.range ? "active" : ""}
-                        >
-                          {r.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <StockChart data={quote.candles} />
-                </div>
-
-                <InsightsCard quote={quote} />
-              </>
-            )}
-          </div>
-
+        ) : quote ? (
           <div className="space-y-6">
-            <Watchlist
-              symbols={watchlist}
-              onSelect={setSymbol}
-              onRemove={(s) => setWatchlist((prev) => prev.filter((x) => x !== s))}
-            />
+            <PriceStats quote={quote} onToggleWatch={toggleWatch} isWatched={isWatched} />
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              {/* Candlestick Chart with Range Selector */}
+              <div className="xl:col-span-2 glass-panel glow-border p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h3 className="font-bold text-gray-100 text-base">Technical Price Chart</h3>
+                    <p className="text-xs text-muted">OHLC Candlesticks + Volume + 20/50 SMA</p>
+                  </div>
+                  <div className="segmented">
+                    {RANGES.map((r) => (
+                      <button
+                        key={r.range}
+                        onClick={() => setRange(r.range)}
+                        className={range === r.range ? "active font-bold" : ""}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <StockChart data={quote.candles} />
+              </div>
+
+              {/* AI Insights Card */}
+              <div className="xl:col-span-1">
+                <InsightsCard quote={quote} />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Bottom Split: AI Chat Assistant + Watchlist & Top Movers */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
             <ChatPanel quote={quote} />
           </div>
+
+          <div className="space-y-6 lg:col-span-1">
+            <Watchlist symbols={watchlist} onSelect={setSymbol} onRemove={(s) => setWatchlist(watchlist.filter((x) => x !== s))} />
+
+            {/* Top Market Movers Card */}
+            <div className="glass-panel glow-border p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  <h3 className="font-bold text-gray-100 text-sm">Market Movers</h3>
+                </div>
+                <div className="segmented">
+                  <button onClick={() => setMoverTab("gainers")} className={moverTab === "gainers" ? "active" : ""}>
+                    Gainers
+                  </button>
+                  <button onClick={() => setMoverTab("losers")} className={moverTab === "losers" ? "active" : ""}>
+                    Losers
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {(moverTab === "gainers" ? TOP_GAINERS : TOP_LOSERS).map((m) => (
+                  <button
+                    key={m.symbol}
+                    onClick={() => setSymbol(m.symbol)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl border border-border/40 hover:border-primary/40 hover:bg-white/5 transition-all text-left"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-gray-100 font-mono-num">{m.name}</div>
+                      <div className="text-[10px] text-muted">{m.symbol}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-bold font-mono-num text-gray-200">{m.price}</div>
+                      <div className={`text-[11px] font-bold font-mono-num ${moverTab === "gainers" ? "text-up" : "text-down"}`}>
+                        {m.change}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-
-        <section className="bottom-grid">
-          <div className="section-card brief-card">
-            <div className="section-header compact-header">
-              <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /><h3>Technical Snapshot</h3></div>
-              <span className="pill positive">Bullish</span>
-            </div>
-            <div className="metric-grid">
-              {[
-                ["RSI", "62.4"],
-                ["MACD", "Bullish"],
-                ["50D SMA", "₹1,285.60"],
-                ["200D SMA", "₹1,238.10"],
-                ["Trend", "Uptrend"],
-                ["Support", "₹1,240"],
-              ].map(([label, value]) => (
-                <div key={label} className="mini-metric">
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="section-card brief-card">
-            <div className="section-header compact-header">
-              <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-primary" /><h3>Fundamental Overview</h3></div>
-            </div>
-            <div className="metric-grid">
-              {[
-                ["Market Cap", "₹18.7T"],
-                ["P/E", "23.8"],
-                ["ROE", "15.7%"],
-                ["ROCE", "18.4%"],
-                ["Debt/Equity", "0.38"],
-                ["Dividend Yield", "0.52%"],
-              ].map(([label, value]) => (
-                <div key={label} className="mini-metric">
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
-
-      <footer className="page-footer">
-        <div className="max-w-[1420px] mx-auto px-4 md:px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted">
-          <p>Built for the Indian market · Educational use only · Not financial advice.</p>
-          <div className="flex items-center gap-3">
-            <Link href="/compare">Compare</Link>
-            <Link href="/screener">Screener</Link>
-            <Link href="/portfolio">Portfolio</Link>
-          </div>
-        </div>
-      </footer>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-base p-8 text-center text-muted">Loading dashboard...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

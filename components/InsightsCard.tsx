@@ -12,12 +12,6 @@ interface Insights {
   bearPoints: string[];
 }
 
-const sentimentStyle: Record<string, { color: string; icon: JSX.Element; ring: string }> = {
-  Bullish: { color: "text-up", icon: <TrendingUp className="w-4 h-4" />, ring: "ring-up/30" },
-  Bearish: { color: "text-down", icon: <TrendingDown className="w-4 h-4" />, ring: "ring-down/30" },
-  Neutral: { color: "text-amber-400", icon: <Minus className="w-4 h-4" />, ring: "ring-amber-400/30" },
-};
-
 export default function InsightsCard({ quote }: { quote: QuoteData }) {
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,8 +43,8 @@ export default function InsightsCard({ quote }: { quote: QuoteData }) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setInsights(data);
-    } catch (e: any) {
-      setError("AI insights unavailable — check ANTHROPIC_API_KEY is set.");
+    } catch {
+      setError("AI insights temporarily unavailable.");
     } finally {
       setLoading(false);
     }
@@ -62,68 +56,94 @@ export default function InsightsCard({ quote }: { quote: QuoteData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quote.symbol]);
 
-  const style = insights ? sentimentStyle[insights.sentiment] || sentimentStyle.Neutral : null;
+  const isBullish = insights?.sentiment === "Bullish";
+  const isBearish = insights?.sentiment === "Bearish";
 
   return (
-    <div className="glass-panel glow-border p-5 animate-fade-in">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-accent2" />
-          <h3 className="font-semibold text-gray-100 text-sm">AI Insight</h3>
+    <div className="glass-panel glow-border p-5 animate-fade-in flex flex-col justify-between h-full">
+      <div>
+        <div className="flex items-center justify-between mb-3.5">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent2 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-100 text-sm">AI Technical Intelligence</h3>
+              <p className="text-[10px] text-muted">Automated market structure engine</p>
+            </div>
+          </div>
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="p-1.5 rounded-lg border border-border bg-white/5 hover:bg-white/10 text-muted hover:text-gray-200 transition-colors disabled:opacity-50"
+            title="Refresh Analysis"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-primary" : ""}`} />
+          </button>
         </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="text-muted hover:text-gray-200 transition-colors"
-          title="Regenerate"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-        </button>
+
+        {loading && !insights && (
+          <div className="space-y-2.5 py-4 animate-pulse">
+            <div className="h-4 bg-white/10 rounded w-2/3" />
+            <div className="h-3 bg-white/10 rounded w-full" />
+            <div className="h-3 bg-white/10 rounded w-4/5" />
+          </div>
+        )}
+
+        {error && <p className="text-xs text-down py-2">{error}</p>}
+
+        {insights && (
+          <>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${
+                  isBullish
+                    ? "bg-positive/10 border-positive/30 text-up"
+                    : isBearish
+                    ? "bg-negative/10 border-negative/30 text-down"
+                    : "bg-warning/10 border-warning/30 text-warning"
+                }`}
+              >
+                {isBullish ? <TrendingUp className="w-3.5 h-3.5" /> : isBearish ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+                {insights.sentiment} Signal
+              </div>
+              <span className="text-xs font-mono-num text-muted">Confidence: <strong className="text-gray-200">{insights.confidence}%</strong></span>
+            </div>
+
+            <p className="text-xs text-gray-300 leading-relaxed mb-4">{insights.summary}</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+              <div className="p-3 rounded-xl bg-positive/5 border border-positive/20">
+                <p className="text-[10px] uppercase tracking-wider text-up font-bold mb-1.5">Bullish Drivers</p>
+                <ul className="space-y-1">
+                  {insights.bullPoints?.map((p, i) => (
+                    <li key={i} className="text-[11px] text-gray-300 flex items-start gap-1.5">
+                      <span className="text-up font-bold">+</span>
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-3 rounded-xl bg-negative/5 border border-negative/20">
+                <p className="text-[10px] uppercase tracking-wider text-down font-bold mb-1.5">Risk Factors</p>
+                <ul className="space-y-1">
+                  {insights.bearPoints?.map((p, i) => (
+                    <li key={i} className="text-[11px] text-gray-300 flex items-start gap-1.5">
+                      <span className="text-down font-bold">−</span>
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {loading && !insights && (
-        <div className="space-y-2 animate-pulse">
-          <div className="h-3 bg-white/10 rounded w-3/4" />
-          <div className="h-3 bg-white/10 rounded w-full" />
-          <div className="h-3 bg-white/10 rounded w-5/6" />
-        </div>
-      )}
-
-      {error && <p className="text-xs text-down">{error}</p>}
-
-      {insights && style && (
-        <>
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ring-1 ${style.ring} ${style.color} text-xs font-semibold mb-3`}>
-            {style.icon}
-            {insights.sentiment} · {insights.confidence}% confidence
-          </div>
-          <p className="text-sm text-gray-300 leading-relaxed mb-3">{insights.summary}</p>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-up mb-1.5 font-semibold">Bull Case</p>
-              <ul className="space-y-1">
-                {insights.bullPoints?.map((p, i) => (
-                  <li key={i} className="text-xs text-gray-400 flex gap-1.5">
-                    <span className="text-up">+</span>{p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-down mb-1.5 font-semibold">Bear Case</p>
-              <ul className="space-y-1">
-                {insights.bearPoints?.map((p, i) => (
-                  <li key={i} className="text-xs text-gray-400 flex gap-1.5">
-                    <span className="text-down">−</span>{p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted mt-4 italic">AI-generated technical commentary — not financial advice.</p>
-        </>
-      )}
+      <p className="text-[10px] text-muted mt-3 italic border-t border-border/40 pt-2">
+        Educational technical commentary — verify signals before placing live market trades.
+      </p>
     </div>
   );
 }

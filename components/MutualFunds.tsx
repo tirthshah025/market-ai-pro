@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, Loader2, TrendingUp, TrendingDown } from "lucide-react";
+import { Search, Loader2, TrendingUp, TrendingDown, Layers } from "lucide-react";
 import {
   createChart,
   ColorType,
@@ -13,11 +13,18 @@ interface Scheme {
   schemeName: string;
 }
 
+const FEATURED_FUNDS = [
+  { schemeCode: 122639, schemeName: "Parag Parikh Flexi Cap Fund - Direct Plan" },
+  { schemeCode: 120503, schemeName: "Nippon India Small Cap Fund - Direct Plan" },
+  { schemeCode: 120716, schemeName: "Quant Small Cap Fund - Direct Plan" },
+  { schemeCode: 118989, schemeName: "HDFC Index S&P BSE SENSEX Fund - Direct Plan" },
+];
+
 export default function MutualFunds() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Scheme[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selected, setSelected] = useState<Scheme | null>(null);
+  const [selected, setSelected] = useState<Scheme | null>(FEATURED_FUNDS[0]);
   const [detail, setDetail] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -33,10 +40,12 @@ export default function MutualFunds() {
         const res = await fetch(`/api/mf/search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         setResults(data.results || []);
+      } catch {
+        setResults([]);
       } finally {
         setSearching(false);
       }
-    }, 350);
+    }, 320);
     return () => clearTimeout(t);
   }, [query]);
 
@@ -49,10 +58,17 @@ export default function MutualFunds() {
       const res = await fetch(`/api/mf/nav?code=${scheme.schemeCode}`);
       const data = await res.json();
       setDetail(data);
+    } catch {
+      setDetail(null);
     } finally {
       setLoadingDetail(false);
     }
   }
+
+  useEffect(() => {
+    if (selected) selectScheme(selected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!detail?.data || !chartContainerRef.current) return;
@@ -73,7 +89,6 @@ export default function MutualFunds() {
       lineWidth: 2,
     });
 
-    // mfapi returns most-recent-first, DD-MM-YYYY dates
     const points = [...detail.data]
       .reverse()
       .map((p: any) => {
@@ -104,71 +119,82 @@ export default function MutualFunds() {
   return (
     <div className="space-y-6">
       <div className="glass-panel glow-border p-5">
-        <div className="relative max-w-lg">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search mutual funds e.g. 'Parag Parikh Flexi Cap', 'Nippon Small Cap'..."
-            className="w-full bg-panel2 border border-border rounded-xl pl-10 pr-9 py-2.5 text-sm text-gray-100
-                       placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
-          />
-          {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted animate-spin" />}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+          <div className="relative flex-1 max-w-lg">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search mutual funds e.g. 'Parag Parikh', 'Nippon Small Cap'..."
+              className="w-full bg-card-strong border border-border rounded-xl pl-10 pr-9 py-2.5 text-sm text-gray-100 placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted animate-spin" />}
 
-          {results.length > 0 && (
-            <div className="absolute z-30 mt-2 w-full glass-panel glow-border max-h-80 overflow-y-auto">
-              {results.map((r) => (
-                <button
-                  key={r.schemeCode}
-                  onClick={() => selectScheme(r)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-white/5 text-sm text-gray-200 border-b border-border/40 last:border-0"
-                >
-                  {r.schemeName}
-                </button>
-              ))}
-            </div>
-          )}
+            {results.length > 0 && (
+              <div className="absolute z-30 mt-2 w-full glass-panel glow-border max-h-80 overflow-y-auto shadow-2xl">
+                {results.map((r) => (
+                  <button
+                    key={r.schemeCode}
+                    onClick={() => selectScheme(r)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-primary/10 text-xs sm:text-sm text-gray-200 border-b border-border/40 last:border-0"
+                  >
+                    {r.schemeName}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted font-semibold">Top Funds:</span>
+            {FEATURED_FUNDS.map((f) => (
+              <button
+                key={f.schemeCode}
+                onClick={() => selectScheme(f)}
+                className={`text-xs px-3 py-1.5 rounded-full font-semibold transition-all ${
+                  selected?.schemeCode === f.schemeCode
+                    ? "bg-primary text-white shadow-glow"
+                    : "bg-white/5 border border-border text-gray-300 hover:bg-white/10"
+                }`}
+              >
+                {f.schemeName.split(" - ")[0]}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="text-[11px] text-muted mt-3">
-          Data source: AMFI daily NAV via mfapi.in — covers all Indian mutual fund schemes, no key required.
+        <p className="text-[11px] text-muted">
+          Data source: AMFI daily NAV via mfapi.in — covers all Indian mutual fund schemes in real-time.
         </p>
       </div>
 
       {loadingDetail && (
         <div className="glass-panel glow-border p-16 flex items-center justify-center gap-3">
-          <Loader2 className="w-5 h-5 text-accent animate-spin" />
-          <p className="text-sm text-muted">Loading NAV history...</p>
+          <Loader2 className="w-5 h-5 text-primary animate-spin" />
+          <p className="text-sm font-semibold text-muted">Loading NAV history for {selected?.schemeName}...</p>
         </div>
       )}
 
       {!loadingDetail && detail?.meta && (
-        <div className="glass-panel glow-border p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="glass-panel glow-border p-5 space-y-4 animate-fade-in">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
             <div>
-              <h3 className="font-semibold text-gray-100">{detail.meta.scheme_name}</h3>
-              <p className="text-xs text-muted mt-1">
-                {detail.meta.fund_house} · {detail.meta.scheme_category}
+              <h3 className="font-bold text-gray-100 text-lg">{detail.meta.scheme_name}</h3>
+              <p className="text-xs text-muted mt-1 flex items-center gap-2">
+                <Layers className="w-3.5 h-3.5 text-primary" /> {detail.meta.fund_house} · {detail.meta.scheme_category}
               </p>
             </div>
             {latest && (
               <div className="text-right">
-                <div className="text-2xl font-bold font-mono-num text-gray-100">₹{parseFloat(latest.nav).toFixed(2)}</div>
-                <div className={`flex items-center justify-end gap-1 text-sm font-semibold ${change >= 0 ? "text-up" : "text-down"}`}>
+                <div className="text-3xl font-extrabold font-mono-num text-gray-100">₹{parseFloat(latest.nav).toFixed(2)}</div>
+                <div className={`flex items-center justify-end gap-1 text-sm font-bold font-mono-num ${change >= 0 ? "text-up" : "text-down"}`}>
                   {change >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                  {change >= 0 ? "+" : ""}
-                  {change.toFixed(2)} ({changePct.toFixed(2)}%)
+                  {change >= 0 ? "+" : ""}{change.toFixed(2)} ({changePct.toFixed(2)}%)
                 </div>
-                <p className="text-[10px] text-muted mt-0.5">as of {latest.date}</p>
+                <p className="text-[10px] text-muted font-mono-num mt-0.5">NAV Date: {latest.date}</p>
               </div>
             )}
           </div>
           <div ref={chartContainerRef} className="w-full" />
-        </div>
-      )}
-
-      {!selected && !loadingDetail && (
-        <div className="glass-panel glow-border p-10 text-center">
-          <p className="text-sm text-muted">Search above to explore any Indian mutual fund's NAV history.</p>
         </div>
       )}
     </div>

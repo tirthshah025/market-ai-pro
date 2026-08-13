@@ -657,6 +657,59 @@ body {
 .text-negative { color: var(--negative); }
 .text-muted { color: var(--muted); }
 
+/* Glassmorphism & UI Utilities */
+.glass-panel {
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glow-border {
+  position: relative;
+}
+
+.glow-border:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: 0 0 25px rgba(96, 165, 250, 0.12), var(--shadow);
+}
+
+.text-up { color: var(--positive) !important; }
+.text-down { color: var(--negative) !important; }
+
+.bg-panel2 {
+  background: var(--card-strong);
+}
+
+.input-field {
+  width: 100%;
+  background: var(--card-strong);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .mobile-nav-button {
   width: 2.5rem;
   height: 2.5rem;
@@ -718,3 +771,4 @@ body {
     justify-content: flex-start;
   }
 }
+

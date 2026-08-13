@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, X } from "lucide-react";
+import { Star, X, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 
 interface Row {
   symbol: string;
@@ -51,41 +51,57 @@ export default function Watchlist({
   }, [symbols]);
 
   return (
-    <div className="glass-panel glow-border p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-        <h3 className="font-semibold text-gray-100 text-sm">Watchlist</h3>
+    <div className="glass-panel glow-border p-5 animate-fade-in">
+      <div className="flex items-center justify-between gap-2 mb-3.5">
+        <div className="flex items-center gap-2">
+          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <h3 className="font-bold text-gray-100 text-sm">Watchlist</h3>
+        </div>
+        <span className="text-[11px] text-muted font-mono-num">{symbols.length} tracked</span>
       </div>
 
-      {symbols.length === 0 && <p className="text-xs text-muted">Click the star on any stock to add it here.</p>}
+      {symbols.length === 0 && (
+        <div className="text-center py-6 border border-dashed border-border rounded-xl">
+          <p className="text-xs text-muted">Click the star on any stock header to pin it here.</p>
+        </div>
+      )}
 
-      <div className="space-y-1">
-        {rows.map((r) => (
-          <div
-            key={r.symbol}
-            className="group flex items-center justify-between px-2.5 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
-            onClick={() => onSelect(r.symbol)}
-          >
-            <span className="text-sm font-medium text-gray-200">{r.symbol}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono-num text-gray-400">{r.price?.toFixed(2)}</span>
-              <span className={`text-xs font-semibold font-mono-num ${r.changePercent >= 0 ? "text-up" : "text-down"}`}>
-                {r.changePercent >= 0 ? "+" : ""}
-                {r.changePercent?.toFixed(2)}%
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(r.symbol);
-                }}
-                className="opacity-0 group-hover:opacity-100 text-muted hover:text-down transition-all"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+      <div className="space-y-1.5">
+        {rows.map((r) => {
+          const isUp = r.changePercent >= 0;
+          return (
+            <div
+              key={r.symbol}
+              className="group flex items-center justify-between px-3 py-2 rounded-xl border border-border/40 hover:border-primary/40 hover:bg-white/5 cursor-pointer transition-all"
+              onClick={() => onSelect(r.symbol)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-200 font-mono-num">{r.symbol}</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs font-mono-num font-semibold text-gray-200">₹{r.price?.toFixed(2)}</span>
+                <span className={`text-[11px] font-bold font-mono-num px-1.5 py-0.5 rounded ${isUp ? "bg-positive/10 text-up" : "bg-negative/10 text-down"}`}>
+                  {isUp ? "+" : ""}{r.changePercent?.toFixed(2)}%
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(r.symbol);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-muted hover:text-down transition-opacity p-0.5"
+                  title="Remove from Watchlist"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
+          );
+        })}
+        {loading && rows.length === 0 && (
+          <div className="flex items-center justify-center gap-2 text-xs text-muted py-4">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> Updating prices...
           </div>
-        ))}
-        {loading && rows.length === 0 && <p className="text-xs text-muted">Loading...</p>}
+        )}
       </div>
     </div>
   );

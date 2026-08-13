@@ -5,23 +5,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        base: "#05070c",
-        panel: "#0d1220",
-        panel2: "#121826",
-        border: "#1c2333",
-        up: "#22c55e",
-        down: "#ef4444",
-        accent: "#60a5fa",
+        base: "var(--background)",
+        panel: "var(--card)",
+        panel2: "var(--card-strong)",
+        border: "var(--border)",
+        up: "var(--positive)",
+        down: "var(--negative)",
+        accent: "var(--primary)",
         accent2: "#a78bfa",
-        muted: "#8b96ab",
+        muted: "var(--muted)",
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 24px rgba(96,165,250,0.25)",
-        card: "0 4px 20px rgba(0,0,0,0.4)",
+        glow: "0 0 25px rgba(96,165,250,0.22)",
+        card: "0 10px 30px rgba(0,0,0,0.35)",
+        glass: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
       },
       keyframes: {
         marquee: {
@@ -32,13 +33,23 @@ const config: Config = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        fadeIn: {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
       },
       animation: {
         marquee: "marquee 30s linear infinite",
         pulseGlow: "pulseGlow 2s ease-in-out infinite",
+        fadeIn: "fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        shimmer: "shimmer 2s infinite",
       },
     },
   },
   plugins: [],
 };
 export default config;
+
