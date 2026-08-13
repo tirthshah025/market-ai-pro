@@ -1,6 +1,8 @@
-# 📈 MarketAI Pro — AI-Powered Stock Analytics Platform
+# 📈 MarketAI Pro V2 — AI-Powered Financial Intelligence
 
-A production-grade stock market dashboard built with **Next.js 16, TypeScript, Tailwind CSS, and Recharts**, featuring **live market data** and a **built-in AI research assistant powered by Claude**.
+A premium Indian market analytics platform built with **Next.js 16, TypeScript, Tailwind CSS, and Lightweight Charts**, featuring **live market data**, a **multi-theme design system**, and a **built-in AI research assistant powered by Claude**.
+
+**Tagline:** AI-powered financial intelligence for the Indian market.
 
 > Built by **Tirth Shah** — B.Tech CSE Student, Ahmedabad, India
 > 📧 tirthshah2596@gmail.com · 💻 [github.com/tirthshah025](https://github.com/tirthshah025)
@@ -22,14 +24,40 @@ MarketAI Pro is focused entirely on the **Indian market** (NSE/BSE) and adds a r
 
 ---
 
+## 🧭 V2 Routes
+
+| Route | Description |
+|---|---|
+| `/` | Market dashboard — overview, movers, AI pulse, stock analysis |
+| `/markets` | Index cards, sector rotation, market sentiment |
+| `/compare` | Side-by-side stock comparison |
+| `/screener` | Stock screener with filters |
+| `/portfolio` | Portfolio tracker and holdings |
+| `/mutual-funds` | Mutual fund explorer |
+| `/ipo-intelligence` | IPO tracker and analysis |
+| `/ai-research` | AI research reports |
+
+## 🎨 Theme System
+
+Five built-in themes (Midnight, Light, Slate, Aurora, Emerald) via CSS variables. Theme choice persists in `localStorage` under `marketai-theme`.
+
+---
+
 ## 🗂️ Project Structure
 
 ```
 market-ai-pro/
 ├── app/
-│   ├── page.tsx              # Main dashboard UI
+│   ├── page.tsx              # V2 market dashboard
+│   ├── markets/page.tsx      # Markets overview
+│   ├── compare/page.tsx      # Stock comparison
+│   ├── screener/page.tsx     # Stock screener
+│   ├── portfolio/page.tsx    # Portfolio tracker
+│   ├── mutual-funds/page.tsx # Mutual funds
+│   ├── ipo-intelligence/page.tsx
+│   ├── ai-research/page.tsx
 │   ├── layout.tsx            # Root layout + metadata
-│   ├── globals.css           # Dark theme styling
+│   ├── globals.css           # Theme tokens + design system
 │   └── api/
 │       ├── quote/route.ts    # Live price + OHLCV data (Yahoo Finance proxy, NSE/BSE)
 │       ├── search/route.ts   # Ticker autocomplete (NSE/BSE only)
@@ -107,13 +135,15 @@ Get a key at [console.anthropic.com](https://console.anthropic.com/).
 
 ## ☁️ Deploy to Vercel (Free)
 
-1. Push this project to a **public GitHub repository**.
-2. Go to [vercel.com/new](https://vercel.com/new) and import the repo.
+1. Push this project to GitHub (`main` branch).
+2. Go to [vercel.com/new](https://vercel.com/new) and import **this** repository (`tirthshah025/market-ai-pro`).
 3. Vercel auto-detects Next.js — no build config needed.
 4. Before deploying, add an environment variable:
    - **Key:** `ANTHROPIC_API_KEY`
    - **Value:** your key from console.anthropic.com
-5. Click **Deploy**. You'll get a live URL like `https://market-ai-pro.vercel.app`.
+5. Click **Deploy**.
+
+> **Important:** If `market-ai-pro.vercel.app` still shows an older v0 trading UI, your domain is attached to a different Vercel project. In the Vercel dashboard, open the project linked to this GitHub repo and assign the production domain there—or remove the domain from the old project first. Recent GitHub deployments may also show **"Deployment was blocked"** if Deployment Protection is enabled; disable it under Project → Settings → Deployment Protection for production.
 
 ### Push to GitHub (if not already done)
 ```bash
