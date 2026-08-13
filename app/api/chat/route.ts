@@ -16,8 +16,11 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured on the server." },
-      { status: 500 }
+      {
+        reply: "AI analysis is temporarily unavailable. Please try again later.",
+        error: "AI service unavailable.",
+      },
+      { status: 200 }
     );
   }
 
@@ -51,8 +54,13 @@ Never fabricate specific real-time prices you were not given; if you don't have 
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json({ error: `Claude API error: ${errText}` }, { status: 502 });
+      return NextResponse.json(
+        {
+          reply: "AI analysis is temporarily unavailable. Please try again later.",
+          error: "AI service unavailable.",
+        },
+        { status: 200 }
+      );
     }
 
     const data = await res.json();
@@ -63,6 +71,12 @@ Never fabricate specific real-time prices you were not given; if you don't have 
 
     return NextResponse.json({ reply: text });
   } catch (err) {
-    return NextResponse.json({ error: "Failed to reach Claude API" }, { status: 500 });
+    return NextResponse.json(
+      {
+        reply: "AI analysis is temporarily unavailable. Please try again later.",
+        error: "AI service unavailable.",
+      },
+      { status: 200 }
+    );
   }
 }
