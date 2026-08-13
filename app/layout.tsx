@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MarketAI Pro | AI-Powered Stock Analytics",
+  title: "MarketAI Pro | AI-Powered Financial Intelligence",
   description:
-    "Real-time stock market analytics with an integrated AI research assistant. Live prices, technical charts, and AI-generated insights.",
+    "AI-powered financial intelligence for the Indian market. Analyze stocks, mutual funds, IPOs and portfolio risk with premium market analytics.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-app-gradient min-h-screen">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>{children}</body>
     </html>
   );
 }
